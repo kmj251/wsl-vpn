@@ -85,7 +85,10 @@ mkdir -p "${WIN_BIN}"
 mkdir -p /usr/local/sbin
 if [ "${no_docker}" = "0" ]; then
   # Install c:\bin\wsl-vpnkit.exe
-  cp "${DOCKER_WSL}/vpnkit.exe" "${WIN_BIN}/wsl-vpnkit.exe"
+  if [ "$(md5sum "${DOCKER_WSL}/vpnkit.exe" | awk '{print $1}')" != "$(md5sum ${WIN_BIN}/wsl-vpnkit.exe | awk '{print $1}')" ]
+  then
+    cp "${DOCKER_WSL}/vpnkit.exe" "${WIN_BIN}/wsl-vpnkit.exe"
+  fi
 
   # Install /usr/local/sbin/vpnkit-tap-vsockd
   extract_from_iso_ps "${DOCKER_WSL}/wsl/docker-for-wsl.iso" containers/services/vpnkit-tap-vsockd/lower/sbin/vpnkit-tap-vsockd vpnkit-tap-vsockd
@@ -101,8 +104,17 @@ if [ "${no_docker}" = "0" ]; then
 else
   download_ps "${WSLBIN_URL}" wslbin.tar.gz
   tar -xf wslbin.tar.gz .
-  mv wsl-vpnkit.exe "${WIN_BIN}"
-  mv npiperelay.exe "${WIN_BIN}"
+
+  # Move files if into $WSL_BIN if they are different than what is there currently.
+  for file in wsl-vpnkit.exe npiperelay.exe
+  do
+    if [[ "$(md5sum ${WIN_BIN}/${file} | awk '{print $1}')" != "$(md5sum ${file} | awk '{print $1}')" ]]
+    then
+      rm -f "${WIN_BIN}/${file}"
+      mv "${file}" "${WIN_BIN}"
+    fi
+  done
+  # mv npiperelay.exe "${WIN_BIN}"
   mv vpnkit-tap-vsockd /usr/local/sbin/
   chmod 755 /usr/local/sbin/vpnkit-tap-vsockd
   chown root:root /usr/local/sbin/vpnkit-tap-vsockd
